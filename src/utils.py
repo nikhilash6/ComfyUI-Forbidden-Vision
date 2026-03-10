@@ -5,41 +5,43 @@ import cv2
 import folder_paths
 import yaml
 import comfy.model_management as model_management
+import os
+import torch
+import numpy as np
+import cv2
+import folder_paths
+import comfy.model_management as model_management
 
-DEFAULT_CONFIG = {
-    'preferred_models': {
-        'upscaler': [
-            "4xBHI_realplksr_dysample_real.pth",
-            "4x_NMKD-Siax_200k.pth",
-            "4x-UltraSharp.pth",
-            "4x_foolhardy_Remacri.pth",
-            "4x-AnimeSharp.pth"
-        ],
-        'refiner_upscaler': [
-            "2xBHI_small_realplksr_small_pretrain.pth",
-            "4x-UltraSharp.pth",
-            "4x_NMKD-Siax_200k.pth",
-            "RealESRGAN_x4plus.pth",
-            "ESRGAN_4x.pth"
-        ],
-        'bbox': [
-            "Anzhc20seg20v2%20y8n.pt",
-            "face_yolov8n_v2.pt",
-            "yolov8x6_animeface.pt",
-            "yolov8n-face.pt"
-        ],
-        'segmentation': [
-            "Anzhc20seg20v2%20y8n.pt",
-            "yolov8n-seg.pt",
-            "yolov8s-seg.pt"
-        ]
+
+RESOLUTIONS = {
+        "📱 1:4 Ultra-Tall (512x2048)": (512, 2048),
+        "📱 1:2.4 Vertical (640x1536)": (640, 1536),
+        "📱 9:16 Portrait (768x1344)": (768, 1344),
+        "📱 2:3 Portrait (832x1216)": (832, 1216),
+        "📱 3:4 Portrait (896x1152)": (896, 1152),
+        "📱 4:5 Portrait (1024x1280)": (1024, 1280),
+        "📱 2:3 SD1.5 (512x768)": (512, 768),
+
+        "🔳 1:1 Square (1024x1024)": (1024, 1024),
+        "🔳 1:1 Square (768x768)": (768, 768),
+        "🔳 1:1 Square (512x512)": (512, 512),
+
+        "🖼️ 5:4 Landscape (1280x1024)": (1280, 1024),
+        "🖼️ 4:3 Landscape (1152x896)": (1152, 896),
+        "🖼️ 3:2 Landscape (1216x832)": (1216, 832),
+        "🖼️ 3:2 SD1.5 (768x512)": (768, 512),
+        "🖼️ 16:9 Widescreen (1344x768)": (1344, 768),
+
+        "🎥 21:9 Cinematic (1536x640)": (1536, 640),
+        "🎥 3.8:1 Panoramic (1984x512)": (1984, 512),
+        "🎥 4:1 Ultra-Wide (2048x512)": (2048, 512),
     }
-}
 def clean_model_name(model_name):
     """Clean model name by removing URL encoding"""
     if model_name:
         return model_name.replace("%20", " ")
     return model_name
+
 def check_for_interruption():
     """Check if processing should be interrupted"""
     try:
@@ -48,6 +50,7 @@ def check_for_interruption():
                 raise model_management.InterruptProcessingException()
     except AttributeError:
         pass
+
 def get_refiner_upscaler_models():
     """Get available upscaler models for the refiner"""
     fast_options = [
@@ -60,13 +63,15 @@ def get_refiner_upscaler_models():
     final_list.extend(sorted(all_models))
     
     return final_list
+
 def check_forbidden_vision_models():
     forbidden_vision_dir = os.path.join(folder_paths.models_dir, "forbidden_vision")
     
     model_status = {}
     required_files = [
         "ForbiddenVision_face_detect_v1.pt", 
-        "ForbiddenVision_face_segment_v1.pth"
+        "ForbiddenVision_face_segment_v1.pth",
+        "ForbiddenVision_neural_corrector_v1.pth"
     ]
     
     for filename in required_files:
@@ -222,25 +227,38 @@ class DepthAnythingManager:
             state_dict = torch.load(model_path, map_location='cpu')
             model.load_state_dict(state_dict)
             model = model.to(device).eval()
-            
+            if device.type == "cuda":
+                model = model.half()
+
             def transform_and_predict(img_np_rgb):
                 try:
                     check_for_interruption()
-                    
+
                     if img_np_rgb.dtype != np.uint8:
                         img_np_rgb = (img_np_rgb * 255).astype(np.uint8)
-                    
+
                     img_bgr = cv2.cvtColor(img_np_rgb, cv2.COLOR_RGB2BGR)
-                    depth = model.infer_image(img_bgr)
-                    depth_normalized = (depth - depth.min()) / (depth.max() - depth.min())
-                    
+
+                    dev = next(model.parameters()).device
+                    use_amp = (dev.type == "cuda")
+                    amp_dtype = torch.float16
+
+                    with torch.inference_mode():
+                        if use_amp:
+                            with torch.autocast(device_type="cuda", dtype=amp_dtype):
+                                depth = model.infer_image(img_bgr)
+                        else:
+                            depth = model.infer_image(img_bgr)
+
+                    depth_normalized = (depth - depth.min()) / (depth.max() - depth.min() + 1e-8)
                     return depth_normalized
-                    
+
                 except model_management.InterruptProcessingException:
                     raise
                 except Exception as e:
-                    print(f"Error in Depth Anything {model_name} prediction: {e}")
-                    return np.zeros_like(img_np_rgb[:,:,0])
+                    print(f"Error in Depth Anything prediction: {e}")
+                    return np.zeros_like(img_np_rgb[:, :, 0], dtype=np.float32)
+
             
             self._model_cache[model_name] = model
             self._transform_cache[model_name] = transform_and_predict
@@ -315,7 +333,8 @@ class DepthAnythingManager:
             if depth_np is None:
                 return None
             
-            depth_tensor = torch.from_numpy(depth_np).unsqueeze(0).unsqueeze(0).float()
+            depth_tensor = torch.from_numpy(depth_np).unsqueeze(0).unsqueeze(0)
+            depth_tensor = depth_tensor.float()
             
             min_val = torch.min(depth_tensor)
             max_val = torch.max(depth_tensor)

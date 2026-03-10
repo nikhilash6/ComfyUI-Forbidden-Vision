@@ -4,38 +4,14 @@ import comfy.sample
 import comfy.samplers
 import comfy.utils
 import latent_preview
+from .utils import RESOLUTIONS
 
 class LatentBuilder:
 
     def __init__(self):
         pass
     
-    RESOLUTIONS = {
-        "[SDXL] 1024x1024 (Square 1:1)": (1024, 1024),
-        "[SDXL] 896x1152 (Portrait 4:5)": (896, 1152),
-        "[SDXL] 832x1216 (Portrait 3:4)": (832, 1216),
-        "[SDXL] 768x1344 (Portrait ~9:15)": (768, 1344),
-        "[SDXL] 864x1536 (Portrait 9:16)": (864, 1536),
-        "[SDXL] 768x1536 (Portrait 2:1)": (768, 1536),
-        "[SDXL] 896x1264 (A4 Portrait)": (896, 1264),
-        "[SDXL] 1264x896 (A4 Landscape)": (1264, 896),
-        "[SDXL] 1152x896 (Landscape 5:4)": (1152, 896),
-        "[SDXL] 1216x832 (Landscape 4:3)": (1216, 832),
-        "[SDXL] 1344x768 (Landscape 16:9)": (1344, 768),
-        "[SDXL] 1536x640 (Landscape 21:9)": (1536, 640),
-        "[SDXL] 2048x768 (Ultra-Wide 32:9)": (2048, 768),
-        "[SDXL] 1920x800 (Cinematic 2.40:1)": (1920, 800),
-
-        "[SD1.5] 512x512 (Square 1:1)": (512, 512),
-        "[SD1.5] 512x768 (Portrait 2:3)": (512, 768),
-        "[SD1.5] 384x640 (Tall 9:16)": (384, 640),
-        "[SD1.5] 640x384 (Widescreen 16:9)": (640, 384),
-        "[SD1.5] 768x512 (Landscape 3:2)": (768, 512),
-        "[SD1.5] 640x480 (Landscape 4:3)": (640, 480),
-        "[SD1.5] 640x512 (Landscape 5:4)": (640, 512),
-
-        "[SD2.1] 768x768 (Square 1:1)": (768, 768),
-    }
+    RESOLUTIONS = RESOLUTIONS
     
     @classmethod
     def INPUT_TYPES(cls):

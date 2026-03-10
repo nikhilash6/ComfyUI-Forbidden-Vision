@@ -33,21 +33,20 @@ def initialize_forbidden_vision():
         model_manager = ForbiddenVisionModelManager.get_instance()
         validation_status = model_manager.validate_model_availability()
         
-        if not validation_status['face_detection']:
-            print("ForbiddenVision: No face detection models found, downloading defaults.")
-            download_results = model_manager.initialize_default_models()
+        if not all(validation_status.values()):
+            print("ForbiddenVision: Missing required models, downloading defaults...")
+            model_manager.initialize_default_models()
             validation_status = model_manager.validate_model_availability()
         
         print("\nForbiddenVision: Model Status:")
-        print(f"  Face Detection: {'✓' if validation_status['face_detection'] else '✗'}")
-        print(f"  Face Segmentation: {'✓' if validation_status['face_segmentation'] else '✗ (will use oval masks)'}")
+        print(f"  Face Detection:   {'✓' if validation_status['face_detection'] else '✗'}")
+        print(f"  Neural Corrector: {'✓' if validation_status['neural_corrector'] else '✗'}")
         
-        if validation_status['face_detection']:
+        if validation_status['face_detection'] and validation_status['neural_corrector']:
             print("ForbiddenVision: Ready to use!")
         else:
-            print("ForbiddenVision: WARNING - No detection models available")
-            print("  Please check your internet connection or manually download models")
-            print("  Nodes will still work with fallback masks")
+            print("ForbiddenVision: WARNING - Some models are missing.")
+            print("  Please check your internet connection.")
         
         print("=" * 60)
         
@@ -55,11 +54,9 @@ def initialize_forbidden_vision():
         
     except ImportError as e:
         print(f"ForbiddenVision: Import error during initialization: {e}")
-        print("ForbiddenVision: Some dependencies may be missing")
         return None
     except Exception as e:
         print(f"ForbiddenVision: Initialization error: {e}")
-        print("ForbiddenVision: Nodes will still load with limited functionality")
         return None
 
 FORBIDDEN_VISION_STATUS = initialize_forbidden_vision()
@@ -92,19 +89,16 @@ __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
 
 try:
     from nodes import CLIPTextEncode
-    
     original_clip_text_encode = CLIPTextEncode.encode
     
     def fv_encode_wrapper(self, clip, text):
         encoded_output = original_clip_text_encode(self, clip, text)
-        
         if isinstance(encoded_output, tuple) and len(encoded_output) > 0:
             conditioning = encoded_output[0]
             if isinstance(conditioning, list) and len(conditioning) > 0:
                 if isinstance(conditioning[0], list) and len(conditioning[0]) == 2:
                     if isinstance(conditioning[0][1], dict):
                         conditioning[0][1]["forbidden_vision_metadata"] = {"original_text": text}
-                        
         return encoded_output
     
     CLIPTextEncode.encode = fv_encode_wrapper

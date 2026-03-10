@@ -2,8 +2,10 @@
   <img src="./images/header.webp" alt="Forbidden Vision Banner"  style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
   <h1>ComfyUI Forbidden Vision</h1>
   <p>
-    Custom face detection and segmentation for ComfyUI with automatic face fixing, intelligent color grading, and iterative refinement. Works with anime and realistic content, SFW and NSFW.
-  </p>
+    Custom face detection and segmentation for ComfyUI with automatic face fixing and
+    <strong>learned, model-driven color and tone adjustment</strong>.
+    Works with anime and realistic content, SFW and NSFW.
+</p>
     <a href="https://ko-fi.com/luxdelux" target="_blank">
   <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi">
 </a>
@@ -13,16 +15,18 @@
 
 ## ⚡ What Makes It Different
 
-**Dual custom-trained models** for detection and segmentation—trained on thousands of manually annotated images spanning real photography, anime, and AI-generated content. Handles extreme poses, unconventional angles, and NSFW content that breaks generic tools.
+Most tools in this space are built on general models. Forbidden Vision ships three models 
+trained from scratch on hand-curated data, built specifically for these tasks:
 
-**Complete iterative workflow**—initial composition building, intelligent color/light enhancement, automatic face fixing with context-aware inpainting, and multi-pass refinement for progressive quality improvement.
+1. **Detection & Segmentation** — consistent across real, anime, and NSFW; handles extreme poses and heavy occlusion
+2. **Neural Corrector** — analyzes and fixes exposure, black levels, and color automatically.
 
 <br>
 
 <div align="center">
-  <img src="./images/loop_fixer.webp" alt="Fixer Loop Example" width="100%" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
+  <img src="./images/anima.webp" alt="Fixer Loop Example" width="100%" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
   <p>
-    <em>From a weak, underlit base, the Refiner corrects tone and exposure, preparing the image for the Fixer to either gently denoise (0.3 here) or drastically reshape the face at 0.8.</em>
+    <em>The Refiner corrects tone and colors, preparing the image for the Fixer to either gently denoise (0.3 here) or drastically reshape the face at 0.8.</em>
   </p>
 </div>
 
@@ -90,20 +94,20 @@ If you encounter detection failures, report them via [GitHub Issues](ttps://gith
 
 ### 🔮 Refiner Node
 
-The Refiner node handles automatic image enhancement that would normally require manual work in external editors. It provides intelligent tone mapping, color correction, and lighting adjustments — plus optional AI upscaling and depth of field simulation.
+The Refiner automatically fixes common image problems: flat lighting, washed out colors, weak contrast—without manual tweaking. A trained model analyzes your image and applies the right corrections, plus optional AI upscaling and depth of field effects.
 
-> **Tip:** The Refiner shines as a pre-pass before your second sampling stage, producing smoother, more unified results.  
-> It also works perfectly well as a standalone image enhancer.
+> **Tip:** Works great as a pre-pass before your second sampling stage for cleaner, more polished results.  
+> Also perfect as a standalone one-click enhancer.
 
 <div align="center">
-<img src="./images/refiner_compare.webp" alt="Refiner Example" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
-<p><em>A first-pass image enhanced with the Refiner's Auto Tone (0.5), Colors (0.5), Depth of Field (0.4 strength, 0.75 depth) and Relight (0.8)</em></p>
+<img src="./images/refiner.webp" alt="Refiner Example" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
+<p><em>A first-pass image enhanced with the Refiner's Neural Corrector</em></p>
 </div>
 
 
 #### Key Features:
 
-* **Auto Tone & Color Correction**: Analyzes and adjusts lighting, contrast, and color balance automatically. 
+* **Smart Auto-Correction**: Trained on curated examples to recognize and fix tone/color problems automatically—lifts muddy shadows, corrects washed highlights, and balances colors intelligently
 * **Highlight Clipping Correction**: Ensures highlights or shadows don't go overboard
 * **AI Upscaling & Detail Enhancement**: Includes model-based upscaling and intelligent sharpening
 * **Depth of Field Effects**: Simulates depth of field using depth maps
@@ -111,7 +115,7 @@ The Refiner node handles automatic image enhancement that would normally require
 
 ### 🏗️ Builder and Rebuilder Node
 
-First-pass and second-pass sampling nodes with integraded useful features to reduce clutter.
+First-pass and second-pass sampling nodes with integrated useful features to reduce clutter.
 
 <div align="center">
 <img src="./images/sfc.webp" alt="Builder Example" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
@@ -271,38 +275,16 @@ By how much an image should be upscaled. I personally prefer 1.2 before a second
 
 ---
 
-### Auto Tone
+### Neural Corrector Controls
 
-**enable_auto_tone**  
-Adjusts exposure, black levels, shadows, and overall contrast based on the image’s brightness distribution.
+**neural_corrector**  
+Adjusts exposure, black levels, shadows, and overall tone and colors using a custom trained model.
 
-**auto_tone_strength**  
+**corrector_tone and corrector_color**  
 Blends between original and fully auto-toned output.  
-- Low values = gentle correction  
-- High values = deeper blacks, cleaner highlights, more stable global contrast  
-
----
-
-### AI Color Controls
-
-**ai_colors**  
-Enables adaptive vibrance. Unlike normal saturation, this boosts dull colors while preventing color clipping.
-
-**ai_colors_strength**  
-How intense the vibrance boost should be.
-Higher values = richer color, but still controlled and adaptive.
-
----
-
-### AI Details
->uses Depth Anything v2 depth estimation model
-
-**ai_details**  
-Enables a clarity-style detail boost.
-Sharpens textures while avoiding halos and minimizing noise.
-
-**ai_details_strength**  
-Controls how much detail is added.
+- Default is full power for tone and 70% for color.
+- If you find the image too bright in places or too dark, simply lower the tone strength. 
+- If you find the color shift, the image "temperature" not to your liking, lower the color strength.
 
 ---
 
@@ -401,7 +383,7 @@ Same as above but for height.
 If you use **ComfyUI Forbidden Vision** in your research, publications, or open-source work, you can cite it as:
 
     @misc{forbiddenvision2025,
-      author       = {Luxdelux},
+      author       = {luxdelux7},
       title        = {Forbidden Vision: Advanced Face Detection, Segmentation, and Refinement for ComfyUI},
       year         = {2025},
       publisher    = {GitHub},
