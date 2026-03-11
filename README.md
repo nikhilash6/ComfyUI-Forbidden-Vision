@@ -1,25 +1,17 @@
 <div align="center">
   <img src="./images/header.webp" alt="Forbidden Vision Banner"  style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
+  
   <h1>ComfyUI Forbidden Vision</h1>
   <p>
     Custom face detection and segmentation for ComfyUI with automatic face fixing and
     <strong>learned, model-driven color and tone adjustment</strong>.
     Works with anime and realistic content, SFW and NSFW.
 </p>
+<p>⭐ <strong>If this tool helps your workflow, consider giving the repo a star!</strong></p>
     <a href="https://ko-fi.com/luxdelux" target="_blank">
   <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi">
 </a>
 </div>
-
-<br>
-
-## ⚡ What Makes It Different
-
-Most tools in this space are built on general models. Forbidden Vision ships three models 
-trained from scratch on hand-curated data, built specifically for these tasks:
-
-1. **Detection & Segmentation** — consistent across real, anime, and NSFW; handles extreme poses and heavy occlusion
-2. **Neural Corrector** — analyzes and fixes exposure, black levels, and color automatically.
 
 <br>
 
@@ -29,6 +21,14 @@ trained from scratch on hand-curated data, built specifically for these tasks:
     <em>The Refiner corrects tone and colors, preparing the image for the Fixer to either gently denoise (0.3 here) or drastically reshape the face at 0.8.</em>
   </p>
 </div>
+
+## ⚡ What Makes It Different
+
+Most tools in this space are built on general models. Forbidden Vision ships three models 
+trained from scratch on hand-curated data, built specifically for these tasks:
+
+1. **Detection & Segmentation** — consistent across real, anime, and NSFW; handles extreme poses and heavy occlusion  
+2. **Neural Corrector** — analyzes and fixes exposure, black levels, and color automatically.
 
 ## 🚀 Quick Start
 
@@ -70,7 +70,7 @@ trained from scratch on hand-curated data, built specifically for these tasks:
 The Fixer node replaces complex face restoration workflows with a single, reliable node solution. Using 2 custom trained models for detection and mask segmentation you get consistent results with fast performance. Works with both realistic and anime styles for any level of face modification.
 
 > **Note:** While the detection and segmentation models are trained on thousands of images, edge cases and failures can still occur—especially with extreme stylization, heavy occlusion, or unusual compositions.
-If you encounter detection failures, report them via [GitHub Issues](ttps://github.com/luxdelux7/ComfyUI-Forbidden-Vision/issues). For NSFW images, upload to an external host (Catbox.moe, ImgBB, etc.) and share the link in your issue.
+If you encounter detection failures, report them via [GitHub Issues](https://github.com/luxdelux7/ComfyUI-Forbidden-Vision/issues). For NSFW images, upload to an external host (Catbox.moe, ImgBB, etc.) and share the link in your issue.
 
 <div align="center">
 <img src="./images/masks.webp" alt="Mask Example" style="border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.1);">
@@ -127,6 +127,19 @@ First-pass and second-pass sampling nodes with integrated useful features to red
 * **Self-Correction**: A final 2 step polish pass that automatically refines the generated image with minimal denoising of 0.05 for cleaner results.
 * **Resolution Presets**: Built-in SDXL, SD1.5 and other optimal resolution presets, plus custom sizing.
 * **Integrated VAE Decoding**: Automatically outputs both latent and decoded image when VAE is connected.
+
+
+## ☕ Support the Project
+
+If **Forbidden Vision** improves your workflow or saves you time, consider supporting development.
+
+Training the models, curating datasets, and maintaining the project takes a lot of time, and support helps me keep improving the models and adding features.
+
+<a href="https://ko-fi.com/luxdelux" target="_blank">
+  <img src="https://ko-fi.com/img/githubbutton_sm.svg" alt="Support me on Ko-fi">
+</a>
+
+Even a small coffee helps keep the project moving forward ❤️
 
 ---
 
