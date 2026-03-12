@@ -12,6 +12,7 @@ from .face_processor_integrated import ForbiddenVisionFaceProcessorIntegrated
 from .utils import check_for_interruption, ensure_model_directories, get_ordered_upscaler_model_list, clean_model_name
 
 
+
 class ForbiddenVisionFaceEditPrep:
     @classmethod
     def INPUT_TYPES(s):
@@ -29,6 +30,12 @@ class ForbiddenVisionFaceEditPrep:
                 "processing_resolution": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 64}),
                 "crop_padding": ("FLOAT", {"default": 1.6, "min": 1.0, "max": 3.0, "step": 0.1}),
                 "mask_expansion": ("INT", {"default": 2, "min": 0, "max": 100, "step": 1}),
+                # ── NEW ──────────────────────────────────────────────────────────
+                "sampling_mask_blur_size": ("INT", {"default": 21, "min": 0, "max": 101, "step": 2,
+                                                     "tooltip": "Blur kernel size for the output mask. 0 or 1 = no blur."}),
+                "sampling_mask_blur_strength": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 6.0, "step": 0.1,
+                                                           "tooltip": "Controls blur sigma relative to kernel size."}),
+                # ─────────────────────────────────────────────────────────────────
                 "enable_pre_upscale": ("BOOLEAN", {"default": True}),
                 "upscaler_model": (upscaler_models, {"default": default_upscaler}),
                 "isolate_face": ("BOOLEAN", {"default": False}),
@@ -49,6 +56,34 @@ class ForbiddenVisionFaceEditPrep:
         self.mask_processor = ForbiddenVisionMaskProcessor()
         self.upscaler_model = None
         self.upscaler_model_name = None
+
+    # ── NEW HELPER ────────────────────────────────────────────────────────────
+    def _blur_mask(self, mask_tensor, blur_size, blur_strength):
+        """
+        Apply Gaussian blur to a (B, H, W) mask tensor.
+        Returns the mask unchanged when blur_size <= 1.
+        Mirrors the logic in process_inpaint_mask() from the main node.
+        """
+        if blur_size <= 1:
+            return mask_tensor
+
+        # kernel size must be odd
+        if blur_size % 2 == 0:
+            blur_size += 1
+
+        device = mask_tensor.device
+        mask_4d = mask_tensor.unsqueeze(1)          # (B, 1, H, W)
+
+        base_sigma = (blur_size - 1) / 8.0
+        strength_t = torch.tensor(blur_strength - 1.0, device=device, dtype=torch.float32)
+        multiplier = 1.0 + torch.tanh(strength_t) * 2.0
+        actual_sigma = base_sigma * multiplier.item()
+
+        blurred = kornia.filters.gaussian_blur2d(
+            mask_4d, (blur_size, blur_size), (actual_sigma, actual_sigma)
+        )
+        return blurred.squeeze(1)                   # back to (B, H, W)
+    # ─────────────────────────────────────────────────────────────────────────
 
     def load_upscaler_model(self, model_name):
         clean_model_name_val = clean_model_name(model_name)
@@ -193,6 +228,7 @@ class ForbiddenVisionFaceEditPrep:
 
     def prepare_face(self, image, face_selection, enable_segmentation, detection_confidence,
                      processing_resolution, crop_padding, mask_expansion,
+                     sampling_mask_blur_size, sampling_mask_blur_strength,  # ← NEW
                      enable_pre_upscale, upscaler_model, isolate_face, mask=None):
         try:
             check_for_interruption()
@@ -259,6 +295,10 @@ class ForbiddenVisionFaceEditPrep:
             cropped_face = cropped_face.to(device)
             sampler_mask = sampler_mask.to(device)
 
+            # ── NEW: apply mask blur if requested ────────────────────────────
+            sampler_mask = self._blur_mask(sampler_mask, sampling_mask_blur_size, sampling_mask_blur_strength)
+            # ─────────────────────────────────────────────────────────────────
+
             if isolate_face:
                 mask_bchw = sampler_mask.unsqueeze(1)
                 kh = max(3, (processing_resolution // 32) | 1)
@@ -307,7 +347,6 @@ class ForbiddenVisionFaceEditPrep:
                     "detection_angle": 0,
                 }
                 return (empty_face, empty_mask, empty_info)
-
 
 
 class ForbiddenVisionFaceEditMerge:
